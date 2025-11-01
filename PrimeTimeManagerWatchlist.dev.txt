@@ -1,0 +1,21 @@
+# Additional info to date: 
+# Date format must be configured with config: dateFormatUse which points of position of used format from config: dateFormats
+# Date segments can separated by allowed following signs config: dateSeperatorAllowed
+
+# Additional info to episodes:
+# Episodes "-1" >> Wildcard = Show Episodes without checking for config: showSimulcast
+# Episodes "0" >> Disable title = Hide Episodes which will normally shown with that date and episodes constellation
+# Episodes ">0" >> Show titel = Episodes have a value above 0
+
+# Additional info to Rank:
+# Use as Rank one option of config: useRank (initial SS, S, A, B, C, D, E or F)
+# Rank list can expand inside config by adding letter to config: useRank. 
+# Rank will be handled in order of values
+
+# Additional info to Name:
+# Dont use "," inside the Name. "," is only allowed to seperate between Date, Episodes, Rank, Name, URL
+
+# Copy following in a new file with name "watchlist.txt" so that this file acts like a backup:
+
+# Date, Episodes, Rank, Name, URL
+2025-10-06, 13, A, Test, https://www.crunchyroll.com/

@@ -1,0 +1,28 @@
+# Copy following in a new file with name "config.txt" so that this file acts like a backup:
+platform = linux
+showAll = true
+showSimulcast = true
+
+showSimulcastAdditionalPast = true
+showSimulcastDaysPast = 2
+showSimulcastAdditionalFuture = true
+showSimulcastDaysFuture = 2
+
+showWildcard = true
+
+useRank = SS,S,A,B,C,D,E,F
+
+dateFormatUse = 1
+dateSeperatorAllowed = .,-,/
+dateFormats = d-m-y,y-m-d,y-d-m
+
+printDebugToFile = true
+printDebugToConsole = true
+
+printDebugConfig = true
+printDebugGeneral = true
+printDebugFutureTitle = true
+printDebugShowAll = true
+printDebugShowSimulcast = true
+printDebugShowSimulcastAdditional = true
+printDebugShowWildcard = true
