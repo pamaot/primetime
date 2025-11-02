@@ -10,6 +10,7 @@ def normalizeString(config):
 
 class LoadData():
     def __init__(self, log):
+        self.BASE_DIR = Path(__file__).resolve().parent.parent
         self.log = log
         self.config = {}
         self.watchlist = []
@@ -29,7 +30,7 @@ class LoadData():
                 print(f"File: {fileDev} not found")
                 print("PrimeTimeManager can't work without definition")
                 try:
-                    input("Press [Enter], to stop the app while holding consol screen (otherwise [Ctrl+C] to cancel)")
+                    input("Press [Enter], to stop the app while holding console screen (otherwise [Ctrl+C] to cancel)")
                 except KeyboardInterrupt:
                     print("\nApplication canceled.")
                     if (platform.system() == str(data.getConfigValue("platform")).capitalize() ):
@@ -65,8 +66,8 @@ class LoadData():
         return d
 
     def loadConfigDict(self):
-        configPath = Path("./config.txt")
-        configDevPath = Path("./PrimeTimeManagerConfig.dev.txt")
+        configPath = self.BASE_DIR / "config.txt"
+        configDevPath = self.BASE_DIR / "PrimeTimeManagerConfig.dev.txt"
         config = {}
         configfile = open(self.getFile(configPath, configDevPath), 'r')
 
@@ -90,8 +91,8 @@ class LoadData():
         self.config = config
     
     def loadWatchDict(self):
-        watchlistPath = Path("./watchlist.txt")
-        watchlistDevPath = Path("./PrimeTimeManagerWatchlist.dev.txt")
+        watchlistPath = self.BASE_DIR / "watchlist.txt"
+        watchlistDevPath = self.BASE_DIR / "/PrimeTimeManagerWatchlist.dev.txt"
         watchlist = []
         watchfile = open(self.getFile(watchlistPath, watchlistDevPath), 'r')
     
