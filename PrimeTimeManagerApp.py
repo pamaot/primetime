@@ -77,11 +77,11 @@ def main():
     for item in watchlist:
         simulcastDate = data.getWatchlistValue(item, "Date")
         simulcastDelta = timedelta(weeks=int(data.getWatchlistValue(item, "Episodes")))
-      
-        if data.getWatchlistValue(item, "Episodes") == -1 and not data.getConfigValue("showWildcard"):
+
+        if (data.getWatchlistValue(item, "Episodes") == -1) and not data.getConfigValue("showWildcard"):
             log.appendItemToStack("skipped_wildcard", f"{item["Name"]} ({item["Date"]}/{item["Episodes"]}/{item["RANK"]})")
             continue
-        elif data.getWatchlistValue(item, "Episodes") == -1 and data.getConfigValue("showWildcard"): 
+        elif (data.getWatchlistValue(item, "Episodes") == -1) and data.getConfigValue("showWildcard"): 
             log.appendItemToStack("show_wildcard", f"{item["Name"]} ({item["Episodes"]}): {item["URL"]}")
             url.append(item["URL"])
             continue

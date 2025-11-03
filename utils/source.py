@@ -111,7 +111,7 @@ class LoadData():
             url = normalizeString(elem[4])
             watchElement = {
                 "Date" : d,
-                "Episodes" : elem[1],
+                "Episodes" : int(elem[1]),
                 "Rank" : elem[2],
                 "Name" : elem[3],
                 "URL": url,
