@@ -10,7 +10,7 @@ The tool will show all your watchlist items that match your `config.txt`.
 ## Version
 
 - **v1.0** – Complete decentralized management via `config.txt` / `watchlist.txt`  
-- **v2.0** – Simple UI for centralized management inside the tool
+- **v2.0** – Simple UI for centralized management inside the tool -> not pushed yet because still in develope
 
 ---
 
