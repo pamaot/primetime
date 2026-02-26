@@ -3,13 +3,13 @@ import os
 import platform
 import sys
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 import calendar
 from utils.logger import Logger
 from utils.source import LoadData
-import webbrowser 
+import webbrowser
 
-def initialLogger(log):
+def initial_logger(log):
     log.registerStack("config")
 
     log.registerStack("general")
@@ -36,7 +36,7 @@ def initialLogger(log):
     log.registerStack("skipped_wildcard")
     log.appendItemToStack("skipped_wildcard", "Show wildcard:")
 
-def openURL(url):
+def open_url(url):
     for i, url in enumerate(url):
         if i == 0:
             webbrowser.open_new(url)
@@ -44,89 +44,104 @@ def openURL(url):
         else:
             webbrowser.open_new_tab(url)
 
-def dateConvert(dateNumber):
-    return calendar.day_name[dateNumber]
+def date_convert(date_number):
+    return calendar.day_name[date_number]
 
-def showSimulcast(log, data, item, url):
-    simulcastDate = data.getWatchlistValue(item, "Date")
-    if (simulcastDate.weekday() == date.today().weekday()):
-        log.appendItemToStack("show_simulcast", f"{item["Name"]} ({dateConvert(item["Date"].weekday())}): {item["URL"]}")
+def show_simulcast(log, data, item, url):
+    simulcast_date = data.getWatchlistValue(item, "Date")
+    if simulcast_date.weekday() == date.today().weekday():
+        log.appendItemToStack("show_simulcast", f"{item["Name"]} ({date_convert(item["Date"].weekday())}): {item["URL"]}")
         url.append(item["URL"])
 
-    if data.getConfigValue("showSimulcastAdditionalPast"): 
+    if data.getConfigValue("showSimulcastAdditionalPast"):
         for offset in range(1, int(data.getConfigValue("showSimulcastDaysPast")) + 1):
-            if simulcastDate.weekday() == (date.today() - timedelta(days=offset)).weekday():
-                log.appendItemToStack("show_simulcast_past", f'{item["Name"]} ({dateConvert(item["Date"].weekday())}): {item["URL"]}')
+            if simulcast_date.weekday() == (date.today() - timedelta(days=offset)).weekday():
+                log.appendItemToStack("show_simulcast_past", f'{item["Name"]} ({date_convert(item["Date"].weekday())}): {item["URL"]}')
                 url.append(item["URL"])
 
-    if data.getConfigValue("showSimulcastAdditionalFuture"): 
+    if data.getConfigValue("showSimulcastAdditionalFuture"):
         for offset in range(1, int(data.getConfigValue("showSimulcastDaysFuture")) + 1):
-            if simulcastDate.weekday() == (date.today() + timedelta(days=offset)).weekday():
-                log.appendItemToStack("show_simulcast_future", f'{item["Name"]} ({dateConvert(item["Date"].weekday())}): {item["URL"]}')
+            if simulcast_date.weekday() == (date.today() + timedelta(days=offset)).weekday():
+                log.appendItemToStack("show_simulcast_future", f'{item["Name"]} ({date_convert(item["Date"].weekday())}): {item["URL"]}')
                 url.append(item["URL"])
 
-def main(): 
+def is_session_active(start_date: date, episodes: int, today: date | None = None) -> bool:
+    """
+    True => Session ist noch aktiv (nicht abgelaufen)
+    Regel: today <= start_date + episodes Wochen
+    """
+    if today is None:
+        today = date.today()
+    if episodes <= 0:
+        return False
+    end_date = start_date + timedelta(weeks=int(episodes))
+    return today <= end_date
+
+def main():
     log = Logger()
-    initialLogger(log)
+    initial_logger(log)
 
     data = LoadData(log)
     config = data.config
     watchlist = data.watchlist
     url = []
+    today = date.today()
 
     for item in watchlist:
-        simulcastDate = data.getWatchlistValue(item, "Date")
-        simulcastDelta = timedelta(weeks=int(data.getWatchlistValue(item, "Episodes")))
+        simulcast_date = data.getWatchlistValue(item, "Date")
+        episodes = int(data.getWatchlistValue(item, "Episodes"))
 
-        if (data.getWatchlistValue(item, "Episodes") == -1) and not data.getConfigValue("showWildcard"):
-            log.appendItemToStack("skipped_wildcard", f"{item["Name"]} ({item["Date"]}/{item["Episodes"]}/{item["RANK"]})")
+        # Wildcard handling
+        if episodes == -1 and not data.getConfigValue("showWildcard"):
+            log.appendItemToStack("skipped_wildcard", f"{item["Name"]} ({item["Date"]}/{item["Episodes"]}/{item["Rank"]})")
             continue
-        elif (data.getWatchlistValue(item, "Episodes") == -1) and data.getConfigValue("showWildcard"): 
+        elif episodes == -1 and data.getConfigValue("showWildcard"):
             log.appendItemToStack("show_wildcard", f"{item["Name"]} ({item["Episodes"]}): {item["URL"]}")
             url.append(item["URL"])
             continue
 
-        # Titel should be shown in simulcast
-        if (simulcastDate + simulcastDelta) >= date.today():
-            # only simulcast is active
-            if data.getConfigValue("showSimulcast"):
-                showSimulcast(log, data, item, url)
-                
-            # show all title
-            if data.getConfigValue("showAll"):
-                # show simulcast if not already shown by config showSimulcast
-                if not data.getConfigValue("showSimulcast"):
-                    showSimulcast(log, data, item, url)
+        # Titel sollte nur ausgewertet werden, wenn Session noch aktiv ist
+        if not is_session_active(simulcast_date, episodes, today=today):
+            continue
 
-                # show every else than simulcast
-                if not (simulcastDate.weekday() == date.today().weekday()):
+        # only simulcast is active
+        if data.getConfigValue("showSimulcast"):
+            show_simulcast(log, data, item, url)
 
-                    # skip additional days in showAll 
-                    skip = False
-                    if data.getConfigValue("showSimulcastAdditionalPast"):
-                        for offset in range(1, int(data.getConfigValue("showSimulcastDaysPast")) + 1):
-                            if simulcastDate.weekday() == (date.today() - timedelta(days=offset)).weekday():
-                                skip = True
+        # show all title
+        if data.getConfigValue("showAll"):
+            # show simulcast if not already shown by config showSimulcast
+            if not data.getConfigValue("showSimulcast"):
+                show_simulcast(log, data, item, url)
 
-                    if skip:
-                        continue                                
-            
-                    if data.getConfigValue("showSimulcastAdditionalFuture"):
-                        for offset in range(1, int(data.getConfigValue("showSimulcastDaysFuture")) + 1):
-                            if simulcastDate.weekday() == (date.today() + timedelta(days=offset)).weekday():
-                                skip = True
+            # show every else than simulcast
+            if not (simulcast_date.weekday() == today.weekday()):
+                # skip additional days in showAll
+                skip = False
+                if data.getConfigValue("showSimulcastAdditionalPast"):
+                    for offset in range(1, int(data.getConfigValue("showSimulcastDaysPast")) + 1):
+                        if simulcast_date.weekday() == (today - timedelta(days=offset)).weekday():
+                            skip = True
 
-                    if skip:
-                        continue
+                if skip:
+                    continue
 
-                    log.appendItemToStack("show_all", f"{item["Name"]} ({dateConvert(item["Date"].weekday())}): {item["URL"]}")
-                    url.append(item["URL"])
+                if data.getConfigValue("showSimulcastAdditionalFuture"):
+                    for offset in range(1, int(data.getConfigValue("showSimulcastDaysFuture")) + 1):
+                        if simulcast_date.weekday() == (today + timedelta(days=offset)).weekday():
+                            skip = True
 
-    if not data.getConfigValue("showAll") and not data.getConfigValue("showSimulcast"): 
+                if skip:
+                    continue
+
+                log.appendItemToStack("show_all", f"{item["Name"]} ({date_convert(item["Date"].weekday())}): {item["URL"]}")
+                url.append(item["URL"])
+
+    if not data.getConfigValue("showAll") and not data.getConfigValue("showSimulcast"):
         log.appendItemToStack("general", "Nothing to do ...")
-    
-    openURL(url)
-    
+
+    open_url(url)
+
     log.printLogging(config)
     if data.getConfigValue("printDebugToConsole"):
         try:
@@ -134,16 +149,15 @@ def main():
         except KeyboardInterrupt:
             print("\nApplication canceled.")
 
-            if (platform.system() == str(data.getConfigValue("platform")).capitalize() ):
+            if (platform.system() == str(data.getConfigValue("platform")).capitalize()):
                 os.system("exit")
-            else: 
+            else:
                 sys.exit(0)
-    else: 
-        if (platform.system() == str(data.getConfigValue("platform")).capitalize() ):
+    else:
+        if (platform.system() == str(data.getConfigValue("platform")).capitalize()):
             os.system("exit")
-        else: 
+        else:
             sys.exit(0)
-    
+
 if __name__ == '__main__':
     main()
-    

@@ -1,5 +1,7 @@
 # Copy following in a new file with name "config.txt" so that this file acts like a backup:
 platform = linux
+autoStartSeconds = 2
+
 showAll = true
 showSimulcast = true
 

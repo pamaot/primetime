@@ -95,25 +95,45 @@ class LoadData():
         watchlistDevPath = self.BASE_DIR / "/PrimeTimeManagerWatchlist.dev.txt"
         watchlist = []
         watchfile = open(self.getFile(watchlistPath, watchlistDevPath), 'r')
-    
-        for line in watchfile: 
-            elem = line.split(",")
-            if not line.strip() or line.startswith("#") or elem[1] == 0:
+
+        for line in watchfile:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
                 continue
-             
-            for index, e in enumerate(elem): 
-                if index == 3:
-                    elem[index] = e.replace(" ", "", 1)
-                else:
-                    elem[index] = e.replace(" ", "")
-                    
-            d = self.parseDate(elem[0])
-            url = normalizeString(elem[4])
+
+            elem = [e.strip() for e in stripped.split(";", 5)]
+
+            # Neu: KEYWORD;DATE;EP;RANK;NAME;URL   (KEYWORD = active|inactive)
+            if len(elem) == 6:
+                keyword = elem[0].lower()
+                if keyword not in {"active", "inactive"}:
+                    continue
+                if keyword == "inactive":
+                    continue  # inaktiv => nicht auswerten
+                date_s, ep_s, rank_s, name_s, url_s = elem[1], elem[2], elem[3], elem[4], elem[5]
+
+            # Alt: DATE;EP;RANK;NAME;URL (=> aktiv)
+            elif len(elem) == 5:
+                date_s, ep_s, rank_s, name_s, url_s = elem[0], elem[1], elem[2], elem[3], elem[4]
+
+            else:
+                continue
+
+            try:
+                episodes = int(ep_s.replace(" ", ""))
+            except ValueError:
+                continue
+            if episodes == 0:
+                continue
+
+            d = self.parseDate(date_s.replace(" ", ""))
+            url = normalizeString(url_s)
+
             watchElement = {
-                "Date" : d,
-                "Episodes" : int(elem[1]),
-                "Rank" : elem[2],
-                "Name" : elem[3],
+                "Date": d,
+                "Episodes": episodes,
+                "Rank": rank_s.replace(" ", ""),
+                "Name": name_s,
                 "URL": url,
             }
 

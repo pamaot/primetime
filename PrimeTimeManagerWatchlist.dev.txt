@@ -12,10 +12,7 @@
 # Rank list can expand inside config by adding letter to config: useRank. 
 # Rank will be handled in order of values
 
-# Additional info to Name:
-# Dont use "," inside the Name. "," is only allowed to seperate between Date, Episodes, Rank, Name, URL
-
 # Copy following in a new file with name "watchlist.txt" so that this file acts like a backup:
 
 # Date, Episodes, Rank, Name, URL
-2025-10-06, 13, A, Test, https://www.crunchyroll.com/
+active;2025-10-06;13;A;Test;https://www.crunchyroll.com/
