@@ -67,8 +67,8 @@ def show_simulcast(log, data, item, url):
 
 def is_session_active(start_date: date, episodes: int, today: date | None = None) -> bool:
     """
-    True => Session ist noch aktiv (nicht abgelaufen)
-    Regel: today <= start_date + episodes Wochen
+    True => Session is active (not rejected)
+    Rule: today <= start_date + episodes in weeks
     """
     if today is None:
         today = date.today()
@@ -100,7 +100,7 @@ def main():
             url.append(item["URL"])
             continue
 
-        # Titel sollte nur ausgewertet werden, wenn Session noch aktiv ist
+        # Titel used, if session is active
         if not is_session_active(simulcast_date, episodes, today=today):
             continue
 

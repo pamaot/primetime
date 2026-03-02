@@ -103,16 +103,14 @@ class LoadData():
 
             elem = [e.strip() for e in stripped.split(";", 5)]
 
-            # Neu: KEYWORD;DATE;EP;RANK;NAME;URL   (KEYWORD = active|inactive)
             if len(elem) == 6:
                 keyword = elem[0].lower()
                 if keyword not in {"active", "inactive"}:
                     continue
                 if keyword == "inactive":
-                    continue  # inaktiv => nicht auswerten
+                    continue
                 date_s, ep_s, rank_s, name_s, url_s = elem[1], elem[2], elem[3], elem[4], elem[5]
 
-            # Alt: DATE;EP;RANK;NAME;URL (=> aktiv)
             elif len(elem) == 5:
                 date_s, ep_s, rank_s, name_s, url_s = elem[0], elem[1], elem[2], elem[3], elem[4]
 

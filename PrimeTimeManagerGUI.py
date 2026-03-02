@@ -11,15 +11,15 @@ try:
     from tkinter import ttk, messagebox
 except ImportError as e:
     raise SystemExit(
-        "Tkinter/Tk ist nicht verfügbar (libtk8.6.so fehlt).\n"
-        "Installiere es über dein System-Paketmanagement, z.B.:\n"
+        "Could not found Tkinter/Tk (libtk8.6.so).\n"
+        "Install with your paketmanager, e.c.:\n"
         "  Debian/Ubuntu: sudo apt install python3-tk tk8.6\n"
         "  Arch:          sudo pacman -S tk\n"
         "  Fedora:        sudo dnf install python3-tkinter tk\n"
-        f"\nOriginalfehler: {e}"
+        f"\nFailure: {e}"
     )
 
-# interne Imports
+# intern imports
 from utils.logger import Logger
 from utils.source import LoadData
 from PrimeTimeManagerApp import initial_logger, show_simulcast, open_url, is_session_active
@@ -44,41 +44,41 @@ class PrimeTimeManagerGUI(tk.Tk):
         super().__init__()
         self.title("PrimeTimeManager")
 
-        # Daten und Logger initialisieren
+        # initialize logger
         self.log = Logger()
         initial_logger(self.log)
         self.data = LoadData(self.log)
 
         self._ui_built = False
 
-        self._save_job = None  # für delayed save (config)
+        self._save_job = None  # delayed save (config)
         self.config_vars: dict[str, tk.Variable] = {}
 
         self._app_icon_imgs: list[tk.PhotoImage] = []
         self._set_app_icon()
 
-        # Extra-Config (nicht in der UI editierbar, aber in config.txt gespeichert)
+        # Extra-Config (only config.txt)
         self._extra_config: dict[str, str] = {}
 
-        # Startup-Gate Position Save (debounced)
+        # Startup-Gate position save (debounced)
         self._gate_pos_job = None
         self._gate_pos_ready = False
         self._gate_last_xy: tuple[int, int] | None = None
 
-        # Default-Fallback
+        # Default fallback
         self.geometry("1100x750")
         self.resizable(True, True)
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        # Watchlist-Editor State
+        # Watchlist-Editor state
         self._watchlist_lines: list[str] = []
         self._watchlist_rows: list[WatchlistRow] = []
         self._visible_row_ids: list[int] = []  # mapping: tree iid -> index in _watchlist_rows
         self._edit_widget: tk.Entry | None = None
         self._edit_info: tuple[str, str] | None = None  # (item_iid, col_id)
 
-        # Filter (Default: Aktiv)
+        # Filter (Default: Active)
         self.watch_filter_var = tk.StringVar(value="Active")
 
         self._watchlist_reload_on_config_change = {
@@ -102,14 +102,11 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._startup_gate_win: tk.Toplevel | None = None
         self._startup_gate_label: ttk.Label | None = None
 
-        # Frames aufbauen
-        # self._build_frames()
-
-        # Startup-Gate: GUI zunächst verstecken, Timer starten, bei User-Input GUI zeigen
+        # Startup-Gate: hide GUI, start timer, user input shows GUI
         self.after_idle(self._start_startup_gate)
 
     def _ensure_main_ui(self) -> None:
-        """Baut die Haupt-GUI genau einmal auf."""
+        """Build GUI one time."""
         if self._ui_built:
             return
         self._build_frames()
@@ -117,8 +114,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _set_app_icon(self) -> None:
         """
-        Setzt das Fenster-/Taskleisten-Icon portabel via PNG.
-        (SVG wird von Tkinter nicht direkt unterstützt.)
+        Set window and taskbar icon via PNG.
         """
         candidates = [
             "icon_16.png",
@@ -142,7 +138,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         if not imgs:
             return
 
-        # Referenzen halten, sonst kann Tk das Icon "verlieren"
+        # hold icon reference
         self._app_icon_imgs = imgs
 
         try:
@@ -164,7 +160,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             return
         geom = str(raw).strip()
 
-        # sehr simple Validierung: "<w>x<h>+<x>+<y>"
+        # simple validate: "<w>x<h>+<x>+<y>"
         if not re.match(r"^\d+x\d+\+\-?\d+\+\-?\d+$", geom):
             return
         try:
@@ -173,7 +169,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             pass
 
     def _on_root_configure(self, _event=None) -> None:
-        # nur Root-Fenster, nicht jede minimale Layout-Änderung sofort wegschreiben
+        # only root window
         if self._win_geom_job:
             try:
                 self.after_cancel(self._win_geom_job)
@@ -190,12 +186,12 @@ class PrimeTimeManagerGUI(tk.Tk):
         except Exception:
             return
 
-        # in extra config ablegen und ganz normal über save_config_to_file mitspeichern
+        # save in additional config.txt while using save_config_to_file
         self._extra_config["windowGeometry"] = geom
         self.delayed_save()
 
     def _on_close(self) -> None:
-        # Beim Schließen sicherheitshalber noch flushen
+        # flush before closing
         try:
             self.save_config_to_file()
         except Exception:
@@ -214,7 +210,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             return False
 
         try:
-            win.geometry(f"+{x}+{y}")  # nur Position
+            win.geometry(f"+{x}+{y}")  # only position
             return True
         except Exception:
             return False
@@ -243,14 +239,14 @@ class PrimeTimeManagerGUI(tk.Tk):
         if win is None or not win.winfo_exists():
             return
 
-        # ab jetzt dürfen wir Positionen speichern
+        # save position
         self._gate_pos_ready = True
 
         restored = self._restore_startup_gate_position_from_config(win)
         if not restored:
             self._center_startup_gate_over_root(win)
 
-        # Polling starten (damit Verschieben wirklich gespeichert wird)
+        # poll position
         self._start_startup_gate_position_polling()
 
     def _start_startup_gate_position_polling(self) -> None:
@@ -290,12 +286,12 @@ class PrimeTimeManagerGUI(tk.Tk):
             self._extra_config["startupGatePosY"] = str(y)
             self.delayed_save()
 
-        # weiter pollen solange Gate offen ist
+        # polling
         self._gate_pos_job = self.after(250, self._poll_startup_gate_position)
 
 
     def _on_startup_gate_configure(self, _event=None) -> None:
-        # Position nur vom Gate speichern (debounced)
+        # save gate position (debounced)
         if not self._gate_pos_ready:
             return
         if not self._startup_gate_win or not self._startup_gate_win.winfo_exists():
@@ -317,7 +313,6 @@ class PrimeTimeManagerGUI(tk.Tk):
             return
 
         try:
-            # rootx/rooty sind i.d.R. zuverlässiger als x/y unter manchen WMs
             x = int(win.winfo_rootx())
             y = int(win.winfo_rooty())
         except Exception:
@@ -327,24 +322,8 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._extra_config["startupGatePosY"] = str(y)
         self.delayed_save()
 
-    def _save_startup_gate_position_to_config(self) -> None:
-        self._gate_pos_job = None
-        win = self._startup_gate_win
-        if win is None or not win.winfo_exists():
-            return
-
-        try:
-            x = int(win.winfo_x())
-            y = int(win.winfo_y())
-        except Exception:
-            return
-
-        self._extra_config["startupGatePosX"] = str(x)
-        self._extra_config["startupGatePosY"] = str(y)
-        self.delayed_save()
-
     # =====================================================
-    # Auto-Save (Config): mit Delay
+    # Auto-Save (Config): with delay
     # =====================================================
     def delayed_save(self):
         if self._save_job:
@@ -354,7 +333,6 @@ class PrimeTimeManagerGUI(tk.Tk):
     def save_config_to_file(self):
         config_path = self.data.BASE_DIR / "config.txt"
 
-        # 1) Zielwerte aus UI + Extra-Config bauen (das sind die einzigen Keys, die wir anfassen dürfen)
         desired: dict[str, str] = {}
 
         for key, var in self.config_vars.items():
@@ -368,14 +346,14 @@ class PrimeTimeManagerGUI(tk.Tk):
                 continue
             desired[key] = str(val)
 
-        # 2) Bestehende Datei lesen (falls nicht vorhanden: starten wir mit leerem Inhalt)
+        # read existing date
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 old_lines = f.readlines()
         except FileNotFoundError:
             old_lines = []
 
-        # 3) Zeilenweise mergen: Kommentare/Leerzeilen bleiben, nur bekannte Keys werden ersetzt
+        # merge line by line: ignore empty or uncommented lines, replace keys
         new_lines: list[str] = []
         seen_keys: set[str] = set()
 
@@ -383,12 +361,12 @@ class PrimeTimeManagerGUI(tk.Tk):
             raw = line.rstrip("\n")
             stripped = raw.strip()
 
-            # Kommentare/Leerzeilen unverändert übernehmen
+            # use unchanged lines
             if not stripped or stripped.startswith("#"):
                 new_lines.append(line if line.endswith("\n") else (line + "\n"))
                 continue
 
-            # Nur "key = value" Zeilen anfassen
+            # touch only "key = value"
             if "=" not in raw:
                 new_lines.append(line if line.endswith("\n") else (line + "\n"))
                 continue
@@ -396,18 +374,16 @@ class PrimeTimeManagerGUI(tk.Tk):
             left, _right = raw.split("=", 1)
             key = left.strip()
 
-            # Wenn es ein Key ist, den wir verwalten: ersetzen
+            # replace key
             if key in desired:
                 new_lines.append(f"{key} = {desired[key]}\n")
                 seen_keys.add(key)
             else:
-                # Unbekannte/CLI-only Keys unverändert lassen
                 new_lines.append(line if line.endswith("\n") else (line + "\n"))
 
-        # 4) Fehlende verwaltete Keys anhängen (ergänzend hinzufügen)
+        # add missing keys
         missing = [k for k in desired.keys() if k not in seen_keys]
         if missing:
-            # optional: kleine Trennzeile, aber nur wenn Datei nicht leer ist
             if new_lines and (not new_lines[-1].strip()):
                 pass
             elif new_lines:
@@ -416,17 +392,17 @@ class PrimeTimeManagerGUI(tk.Tk):
             for k in missing:
                 new_lines.append(f"{k} = {desired[k]}\n")
 
-        # 5) Schreiben
+        # write
         with open(config_path, "w", encoding="utf-8") as f:
             f.writelines(new_lines)
 
     def _start_startup_gate(self):
         """
         Verhalten:
-          - Root-GUI startet "versteckt"
-          - wir zeigen aber ein kleines Gate-Fenster, das Eingaben abfängt
-          - wenn innerhalb autoStartSeconds irgendeine Eingabe kommt: GUI zeigen, Autostart abbrechen
-          - sonst: PrimeTime-Logik ausführen und GUI gar nicht erst anzeigen
+          - Root-GUI starting "invisible"
+          - show up only gate window, which accepts inputs
+          - if: input is in time of autoStartSeconds: show GUI, cancel autostart
+          - else: run PrimeTime logic and dont show GUI
         """
         if self._startup_gate_triggered:
             return
@@ -438,7 +414,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             seconds = 0
 
         if seconds <= 0:
-            # Kein Gate: GUI normal anzeigen
+            # No Gate: show GUI
             self._ensure_main_ui()
             try:
                 self.deiconify()
@@ -446,7 +422,7 @@ class PrimeTimeManagerGUI(tk.Tk):
                 pass
             return
 
-        # Root sofort verstecken, bevor irgendwas aufblitzt
+        # hide instantly Root, no window flashing
         try:
             self.withdraw()
         except Exception:
@@ -454,10 +430,10 @@ class PrimeTimeManagerGUI(tk.Tk):
 
         self._startup_gate_active = True
 
-        # Gate-Fenster anzeigen (nur das soll sichtbar sein)
+        # show gate window (only)
         self._show_startup_gate_window(seconds)
 
-        # Timer setzen
+        # set timer
         if self._autostart_job:
             try:
                 self.after_cancel(self._autostart_job)
@@ -469,19 +445,12 @@ class PrimeTimeManagerGUI(tk.Tk):
 
 
     def _show_startup_gate_window(self, seconds: int):
-        # Falls noch offen: neu verwenden
+        # if already running: reuse
         if self._startup_gate_win is None or not self._startup_gate_win.winfo_exists():
             win = tk.Toplevel(self)
             win.title("PrimeTimeManager – Autostart")
             win.resizable(False, False)
             self._apply_icon_to_toplevel(win)
-
-            # WICHTIG (KDE): NICHT transient zum Root setzen, wenn Root direkt danach withdraw() wird.
-            # Sonst kann der WM das Gate mit verstecken.
-            # try:
-            #     win.transient(self)
-            # except Exception:
-            #     pass
 
             frm = ttk.Frame(win, padding=14)
             frm.pack(fill="both", expand=True)
@@ -498,18 +467,18 @@ class PrimeTimeManagerGUI(tk.Tk):
             self._startup_gate_win = win
             self._startup_gate_label = lbl
 
-            # Eingaben auf dem Gate-Fenster abfangen
+            # Accept inputs inside gate window
             win.bind("<KeyPress>", lambda _e: self._startup_gate_user_interaction())
             win.bind("<ButtonPress>", lambda _e: self._startup_gate_user_interaction())
             win.bind("<Escape>", lambda _e: self._startup_gate_user_interaction())
 
-            # Sichtbarkeit / Fokus erzwingen
+            # force focus
             try:
                 win.attributes("-topmost", True)
             except Exception:
                 pass
 
-            # Gate sinnvoll am Screen positionieren (Root kann gleich unsichtbar sein)
+            # gate positioning
             try:
                 self.update_idletasks()
                 win.update_idletasks()
@@ -532,20 +501,20 @@ class PrimeTimeManagerGUI(tk.Tk):
             except Exception:
                 pass
 
-                # Wichtig: nach dem Anzeigen Position anwenden + Polling starten
+                # Use the window position and start polling while showing
             try:
                 win.after_idle(self._apply_startup_gate_position_after_map)
                 win.after(120, self._apply_startup_gate_position_after_map)
             except Exception:
                 pass
 
-                # topmost wieder aus (optional, aber angenehmer)
+                # undo topmost
             try:
                 win.after(500, lambda: win.attributes("-topmost", False))
             except Exception:
                 pass
 
-                # Countdown-Text setzen + live updaten
+                # set countdown text
             self._update_startup_gate_countdown(seconds, seconds * 1000)
 
     def _update_startup_gate_countdown(self, total_seconds: int, remaining_ms: int):
@@ -558,7 +527,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
         remaining_s = max(0, (remaining_ms + 999) // 1000)
         self._startup_gate_label.config(
-            text=f"Autostart in {remaining_s} Sekunden…\n(ohne Eingabe wird automatisch geöffnet)"
+            text=f"Autostart in {remaining_s} seconds…\n(without input open automatically)"
         )
 
         if remaining_ms <= 0:
@@ -579,7 +548,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _startup_gate_user_interaction(self):
         """
-        Erste User-Interaktion innerhalb des Timers => Autostart abbrechen, GUI zeigen.
+        First user interaction inside running timer => cancel Autostart, show GUI
         """
         if not self._startup_gate_active or self._startup_gate_triggered:
             return
@@ -587,7 +556,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._startup_gate_triggered = True
         self._startup_gate_active = False
 
-        # Timer abbrechen
+        # cancel timer
         if self._autostart_job:
             try:
                 self.after_cancel(self._autostart_job)
@@ -595,10 +564,10 @@ class PrimeTimeManagerGUI(tk.Tk):
                 pass
             self._autostart_job = None
 
-        # Gate-Fenster schließen
+        # close Gate window
         self._close_startup_gate_window()
 
-        # Jetzt erst die Haupt-GUI bauen und anzeigen
+        # show GUI
         self._ensure_main_ui()
         try:
             self.deiconify()
@@ -608,10 +577,6 @@ class PrimeTimeManagerGUI(tk.Tk):
             pass
 
     def _startup_gate_autostart_fire(self):
-        """
-        Keine Eingabe innerhalb der Zeit => PrimeTime-Logik laufen lassen.
-        Danach GUI schließen (typisches Autostart-Verhalten).
-        """
         if self._startup_gate_triggered:
             return
 
@@ -619,7 +584,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._startup_gate_active = False
         self._autostart_job = None
 
-        # Gate-Fenster schließen
+        # close gate window
         self._close_startup_gate_window()
 
         def worker():
@@ -634,7 +599,6 @@ class PrimeTimeManagerGUI(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def _bind_startup_gate_inputs(self):
-        # Doppelt binden vermeiden
         if self._startup_gate_bind_ids:
             return
 
@@ -654,7 +618,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._startup_gate_bind_ids.clear()
 
     # =====================================================
-    # Layout-Struktur (2 Hauptteile: Config + Watchlist)
+    # Layout structure (2 main columns: Config + Watchlist)
     # =====================================================
     def _build_frames(self):
         container = ttk.Frame(self, padding=10)
@@ -674,13 +638,13 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._build_watchlist_ui()
 
     # =====================================================
-    # Config UI mit linker & rechter Spalte
+    # Config UI with left and right column
     # =====================================================
     def _build_config_ui(self):
         config = self.data.config
         self.config_vars = {}
 
-        # Keys, die in der UI nicht editierbar sein sollen
+        # uneditable keys inside UI
         readonly_keys = {"dateSeperatorAllowed", "dateFormats"}
 
         hidden_keys = {
@@ -757,8 +721,8 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _on_config_var_changed(self, key: str):
         """
-        1) config speichern (delayed)
-        2) falls relevante keys: watchlist reload (delayed)
+        1) save config (delayed)
+        2) while significant keys: reload watchlist (delayed)
         """
         self.delayed_save()
 
@@ -771,15 +735,9 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._watchlist_reload_job = self.after(250, self._reload_watchlist_after_config_change)
 
     def _reload_watchlist_after_config_change(self):
-        """
-        Wichtig: LoadData.watchlist basiert auf Config. Darum:
-          - config vars -> self.data.config aktualisieren
-          - danach self.data.loadWatchDict() neu laden
-          - dann Watchlist-Table neu befüllen
-        """
         self._watchlist_reload_job = None
 
-        # Config in self.data.config übernehmen (ähnlich wie _run_main, aber ohne Browser öffnen)
+        # refresh config inside self.data.config
         for k, var in self.config_vars.items():
             val = var.get()
             if str(val).lower() == "true":
@@ -790,18 +748,18 @@ class PrimeTimeManagerGUI(tk.Tk):
                 val = int(val)
             self.data.config[k] = val
 
-        # Watchlist im Backend neu laden (damit "active titles" / simulcast logic aktuell ist)
+        # reload the watchlist inside the backend
         try:
             self.data.loadWatchDict()
         except Exception as e:
-            messagebox.showerror("Watchlist reload fehlgeschlagen", str(e))
+            messagebox.showerror("Watchlist reload failed", str(e))
             return
 
-        # UI Watchlist Tabelle neu laden (aus Datei + Filter)
+        # reload UI watchlist table (from the file and the filter)
         self.reload_watchlist()
 
     # =====================================================
-    # Watchlist UI (Headerzeile nach Wunsch)
+    # Watchlist UI
     # =====================================================
     def _build_watchlist_ui(self):
         top = ttk.Frame(self.watch_frame)
@@ -874,12 +832,12 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def add_watchlist_entry(self):
         """
-        Fügt eine neue Zeile ganz oben in watchlist.txt ein (active;...).
-        Danach Reload.
+        add a new line ahead the watchlist
+        After that reload
         """
         watch_path = self.data.BASE_DIR / "watchlist.txt"
 
-        # Simple Defaults (kannst du natürlich anpassen)
+        # Simple defaults
         today_s = date.today().strftime("%d-%m-%Y")
         new_line = f"active;{today_s};1;A;New Title;https://example.com\n"
 
@@ -890,14 +848,13 @@ class PrimeTimeManagerGUI(tk.Tk):
             with open(watch_path, "w", encoding="utf-8") as f:
                 f.writelines(lines)
         except Exception as e:
-            messagebox.showerror("Add Entry fehlgeschlagen", str(e))
+            messagebox.showerror("Add Entry failed", str(e))
             return
 
-        # Reload (inkl. Re-Mapping der line_index)
-        self._did_autofix_watchlist = True  # nicht nochmal auto-umschreiben wegen Default-episodes
+        # Reload
+        self._did_autofix_watchlist = True
         self.reload_watchlist()
 
-        # Optional: direkt die neue erste Zeile markieren
         try:
             first = self.watch_tree.get_children("")[0]
             self.watch_tree.selection_set(first)
@@ -908,7 +865,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def open_delete_menu(self):
         """
-        Kleines Auswahl-Menü:
+        input box
         - delete marked element
         - delete all inactive elements
         """
@@ -943,7 +900,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def delete_marked_element(self):
         """
-        Löscht den selektierten Eintrag aus watchlist.txt (physisch entfernen, nicht nur inactive).
+        delete marked element (physically)
         """
         sel = self.watch_tree.selection()
         if not sel:
@@ -973,14 +930,14 @@ class PrimeTimeManagerGUI(tk.Tk):
             with open(watch_path, "w", encoding="utf-8") as f:
                 f.writelines(lines)
         except Exception as e:
-            messagebox.showerror("Delete fehlgeschlagen", str(e))
+            messagebox.showerror("Delete failed", str(e))
             return
 
         self.reload_watchlist()
 
     def delete_all_inactive_elements(self):
         """
-        Löscht alle Zeilen, die mit 'inactive;' anfangen (oder inactive mit Whitespace).
+        delete all marked as inactive lines
         """
         if not messagebox.askyesno("Confirm delete", "Delete ALL inactive elements from watchlist.txt?"):
             return
@@ -1000,7 +957,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             with open(watch_path, "w", encoding="utf-8") as f:
                 f.writelines(kept)
         except Exception as e:
-            messagebox.showerror("Delete fehlgeschlagen", str(e))
+            messagebox.showerror("Delete failed", str(e))
             return
 
         self.reload_watchlist()
@@ -1009,7 +966,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         try:
             self._load_watchlist_lines_and_rows()
         except Exception as e:
-            messagebox.showerror("Watchlist laden fehlgeschlagen", str(e))
+            messagebox.showerror("Loading watchlist failed", str(e))
             return
 
         # set all series to inactive if episodes==0 or session expired
@@ -1020,7 +977,7 @@ class PrimeTimeManagerGUI(tk.Tk):
                 if changed > 0:
                     self._load_watchlist_lines_and_rows()
             except Exception as e:
-                messagebox.showerror("Auto-Fix Watchlist fehlgeschlagen", str(e))
+                messagebox.showerror("Auto-Fix watchlist failed", str(e))
                 self._did_autofix_watchlist = True
 
         self._populate_watchlist_tree()
@@ -1038,9 +995,9 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _in_simulcast_window(self, start_date_obj: date, today: date) -> bool:
         """
-        Entspricht dem, was show_simulcast() für eine URL auslösen würde:
-        - Wochentag == heute
-        - oder in AdditionalPast/AdditionalFuture Fenstern
+        similar to show_simulcast(), which trigger:
+        - weekday == today
+        - or AdditionalPast/AdditionalFuture window
         """
         if start_date_obj.weekday() == today.weekday():
             return True
@@ -1059,10 +1016,9 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _compute_result_row_indices(self) -> list[int]:
         """
-        Liefert die Indizes (in self._watchlist_rows), die nach der PrimeTime-Logik
-        als Ergebnis (URLs öffnen) herauskommen würden.
+        Take Indices (in self._watchlist_rows), from PrimeTime-Logik as results (URLs öffnen)
 
-        Wichtig: nutzt NUR active-Zeilen aus watchlist.txt.
+        Use only active lines
         """
         self._update_data_config_from_ui()
 
@@ -1074,13 +1030,13 @@ class PrimeTimeManagerGUI(tk.Tk):
             if not row.active:
                 continue
 
-            # episodes parsen
+            # parse episodes
             try:
                 episodes = int(str(row.episodes_s).strip())
             except ValueError:
                 continue
 
-            # Wildcard: -1 => ggf. immer rein (ohne Session-Check)
+            # Wildcard: -1 => without session check
             if episodes == -1:
                 if self.data.getConfigValue("showWildcard"):
                     url = str(row.url_s).strip()
@@ -1089,17 +1045,17 @@ class PrimeTimeManagerGUI(tk.Tk):
                         already_added_urls.add(url)
                 continue
 
-            # episodes==0 => gilt bei dir als disabled; zudem wird beim Start auto-inactive gemacht
+            # episodes==0 => equivalent as disabled
             if episodes == 0:
                 continue
 
-            # Datum parsen
+            # parse date
             try:
                 start_d = self.data.parseDate(str(row.date_s).strip())
             except Exception:
                 continue
 
-            # Session abgelaufen?
+            # expired session
             if not is_session_active(start_d, episodes, today=today):
                 continue
 
@@ -1110,14 +1066,14 @@ class PrimeTimeManagerGUI(tk.Tk):
             show_simulcast_cfg = bool(self.data.getConfigValue("showSimulcast"))
             show_all_cfg = bool(self.data.getConfigValue("showAll"))
 
-            # 1) showSimulcast: fügt URLs hinzu, wenn im simulcast-window
+            # showSimulcast: add URLs if simulcast
             if show_simulcast_cfg:
                 if self._in_simulcast_window(start_d, today):
                     if url not in already_added_urls:
                         result_indices.append(idx)
                         already_added_urls.add(url)
 
-            # 2) showAll: (a) ggf. simulcast ergänzen, wenn showSimulcast aus ist
+            # showAll: (a) add simulcast if showSimulcast
             if show_all_cfg:
                 if not show_simulcast_cfg:
                     if self._in_simulcast_window(start_d, today):
@@ -1125,7 +1081,6 @@ class PrimeTimeManagerGUI(tk.Tk):
                             result_indices.append(idx)
                             already_added_urls.add(url)
 
-                # (b) “alles andere außer simulcast day”, mit Skip-Logik wie in main()
                 if start_d.weekday() != today.weekday():
                     skip = False
 
@@ -1151,10 +1106,10 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _autofix_active_entries_on_start(self) -> int:
         """
-        Schreibt beim Start bestimmte active-Einträge automatisch auf inactive um:
-          - episodes == -1: Wildcard -> niemals umschreiben
-          - episodes == 0: immer inactive
-          - episodes > 0: wenn Session abgelaufen -> inactive
+        Reflag active elements to inactive if:
+          - episodes == -1: Wildcard -> do not reflag
+          - episodes == 0: everytime -> inactive
+          - episodes > 0: if Session expired -> inactive
         """
         watch_path = self.data.BASE_DIR / "watchlist.txt"
 
@@ -1171,15 +1126,15 @@ class PrimeTimeManagerGUI(tk.Tk):
             except ValueError:
                 continue
 
-            # Wildcard nie anfassen
+            # do not touch wildcard
             if episodes == -1:
                 continue
 
-            # episodes==0 => immer inactive
+            # episodes==0 => inactive
             if episodes == 0:
                 should_inactivate = True
             else:
-                # episodes > 0: über gemeinsame Helper-Regel prüfen
+                # episodes > 0: check with the helper class
                 try:
                     start_d = self.data.parseDate(str(row.date_s).strip())
                 except Exception:
@@ -1209,16 +1164,16 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def _try_parse_watchlist_line(self, line: str) -> tuple[bool, str, str, str, str, str] | None:
         """
-        Erwartet primär:
+        Expect:
           active;DATE;EP;RANK;NAME;URL
           inactive;DATE;EP;RANK;NAME;URL
 
         Fallback (Altformat):
-          DATE;EP;RANK;NAME;URL   => active=True
+          DATE;EP;RANK;NAME;URL => active=True
         """
         parts = [p.strip() for p in line.split(";", 5)]
 
-        # Neu: 6 Spalten mit Keyword
+        # 6 Columns with keys
         if len(parts) == 6:
             keyword, date_s, episodes_s, rank_s, name_s, url_s = parts
             kw = keyword.lower()
@@ -1227,7 +1182,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             active = (kw == "active")
             return active, date_s, episodes_s, rank_s, name_s, url_s
 
-        # Alt: 5 Spalten => aktiv
+        # 5 Columns with keys -> active
         if len(parts) == 5:
             date_s, episodes_s, rank_s, name_s, url_s = parts
             return True, date_s, episodes_s, rank_s, name_s, url_s
@@ -1246,7 +1201,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             if not stripped:
                 continue
 
-            # Kommentarzeilen ignorieren
+            # ignore comments
             if stripped.startswith("#"):
                 continue
 
@@ -1272,8 +1227,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
     def open_visible_in_browser(self):
         """
-        Öffnet die URLs der aktuell angezeigten Zeilen (also inkl. Filter).
-        Optional könntest du hier auch nur "aktive" öffnen – aktuell öffnet es genau das, was du siehst.
+        Open url of handled lines in browser
         """
         urls: list[str] = []
         for tree_iid in self.watch_tree.get_children(""):
@@ -1286,7 +1240,7 @@ class PrimeTimeManagerGUI(tk.Tk):
                 urls.append(row.url_s)
 
         if not urls:
-            messagebox.showinfo("Open in Browser", "Keine URLs zum Öffnen (aktuelle Ansicht ist leer).")
+            messagebox.showinfo("Open in Browser", "No URL to open (empty).")
             return
 
         open_url(urls)
@@ -1297,7 +1251,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         for item in self.watch_tree.get_children():
             self.watch_tree.delete(item)
 
-        # Ergebnis-Zeilen berechnen (PrimeTime Output)
+        # Recalculate result-line (PrimeTime Output)
         result_row_indices = set(self._compute_result_row_indices())
 
         self._visible_row_ids = []
@@ -1305,7 +1259,7 @@ class PrimeTimeManagerGUI(tk.Tk):
 
         for row_idx, row in enumerate(self._watchlist_rows):
             if filter_value == "Active":
-                # Active soll das PrimeTime-Ergebnis widerspiegeln
+                # Active mirroring result
                 if not row.active:
                     continue
                 if row_idx not in result_row_indices:
@@ -1315,8 +1269,7 @@ class PrimeTimeManagerGUI(tk.Tk):
                 if row.active:
                     continue
 
-            # "All" zeigt alles aus der Datei
-
+            # "All" shows all from the file
             iid = str(len(self._visible_row_ids))
             self._visible_row_ids.append(row_idx)
 
@@ -1329,11 +1282,11 @@ class PrimeTimeManagerGUI(tk.Tk):
             )
 
     def _on_tree_click_anywhere(self, event):
-        # Klick irgendwo: laufenden Edit beenden
+        # Cancel editing by click outside
         if self._edit_widget is not None:
             self._commit_inline_edit()
 
-        # Toggle Active wenn auf Active-Zelle geklickt
+        # Toggle active while clicking on active
         region = self.watch_tree.identify("region", event.x, event.y)
         if region != "cell":
             return
@@ -1344,7 +1297,7 @@ class PrimeTimeManagerGUI(tk.Tk):
             return
 
         col_index = int(col_id.lstrip("#")) - 1
-        if col_index != 0:  # nur "Active" Spalte
+        if col_index != 0:
             return
 
         visible_idx = int(row_id)
@@ -1358,16 +1311,16 @@ class PrimeTimeManagerGUI(tk.Tk):
         row = self._watchlist_rows[row_idx]
         row.active = not row.active
 
-        # UI aktualisieren
+        # Refresh UI
         self.watch_tree.set(tree_iid, "Active", "☑" if row.active else "☐")
 
-        # Datei aktualisieren
+        # Refresh file
         try:
             self._write_watchlist_row_back(row_idx)
         except Exception as e:
             messagebox.showerror("Speichern fehlgeschlagen", str(e))
 
-        # Wenn Filter aktiv ist, ggf. Zeile ausblenden
+        # If the filter is active, hide the line
         current_filter = self.watch_filter_var.get()
         if (current_filter == "Aktiv" and not row.active) or (current_filter == "Inaktiv" and row.active):
             self._populate_watchlist_tree()
@@ -1386,7 +1339,7 @@ class PrimeTimeManagerGUI(tk.Tk):
         if col_index < 0 or col_index >= len(self.WATCH_COLS):
             return
 
-        # Active-Spalte nicht inline editieren (nur click toggeln)
+        # toggle column only by click, not inline editing
         if self.WATCH_COLS[col_index] == "Active":
             return
 
@@ -1480,16 +1433,16 @@ class PrimeTimeManagerGUI(tk.Tk):
         self._watchlist_lines = lines
 
     # =====================================================
-    # Thread für Main-Logik starten
+    # Start thread for main logic
     # =====================================================
     def _run_main_threaded(self):
         threading.Thread(target=self._run_main, daemon=True).start()
 
     # =====================================================
-    # Hauptlogik (CLI → GUI)
+    # Main logic (CLI → GUI)
     # =====================================================
     def _run_main(self):
-        # GUI-Eingaben übernehmen
+        # use GUI inputs
         for key, var in self.config_vars.items():
             val = var.get()
             if str(val).lower() == "true":
@@ -1500,7 +1453,7 @@ class PrimeTimeManagerGUI(tk.Tk):
                 val = int(val)
             self.data.config[key] = val
 
-        # Logger neu initialisieren
+        # reinitialize logger
         self.log = Logger()
         initial_logger(self.log)
         self.data.log = self.log
@@ -1510,8 +1463,8 @@ class PrimeTimeManagerGUI(tk.Tk):
         data = self.data
 
         for item in watchlist:
-            simulcastDate = data.getWatchlistValue(item, "Date")
-            simulcastDelta = timedelta(weeks=int(data.getWatchlistValue(item, "Episodes")))
+            simulcast_date = data.getWatchlistValue(item, "Date")
+            simulcast_delta = timedelta(weeks=int(data.getWatchlistValue(item, "Episodes")))
 
             if (data.getWatchlistValue(item, "Episodes") == -1) and not data.getConfigValue("showWildcard"):
                 continue
@@ -1519,24 +1472,24 @@ class PrimeTimeManagerGUI(tk.Tk):
                 url_list.append(item["URL"])
                 continue
 
-            if (simulcastDate + simulcastDelta) >= date.today():
+            if (simulcast_date + simulcast_delta) >= date.today():
                 if data.getConfigValue("showSimulcast"):
                     show_simulcast(self.log, data, item, url_list)
                 if data.getConfigValue("showAll"):
                     if not data.getConfigValue("showSimulcast"):
                         show_simulcast(self.log, data, item, url_list)
 
-                    if not (simulcastDate.weekday() == date.today().weekday()):
+                    if not (simulcast_date.weekday() == date.today().weekday()):
                         skip = False
                         if data.getConfigValue("showSimulcastAdditionalPast"):
                             for offset in range(1, int(data.getConfigValue("showSimulcastDaysPast")) + 1):
-                                if simulcastDate.weekday() == (date.today() - timedelta(days=offset)).weekday():
+                                if simulcast_date.weekday() == (date.today() - timedelta(days=offset)).weekday():
                                     skip = True
                         if skip:
                             continue
                         if data.getConfigValue("showSimulcastAdditionalFuture"):
                             for offset in range(1, int(data.getConfigValue("showSimulcastDaysFuture")) + 1):
-                                if simulcastDate.weekday() == (date.today() + timedelta(days=offset)).weekday():
+                                if simulcast_date.weekday() == (date.today() + timedelta(days=offset)).weekday():
                                     skip = True
                         if skip:
                             continue
